@@ -1,0 +1,28 @@
+# Explicitly specify platform for AMD64
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Prevent Python from buffering output
+ENV PYTHONUNBUFFERED=1
+
+# Install system dependencies required for PyMuPDF
+RUN apt-get update && apt-get install -y \
+    libmupdf-dev build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements if any
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create input and output directories inside the container
+RUN mkdir -p /app/input /app/output
+
+# Command to run when the container starts
+CMD ["python", "main.py"]
