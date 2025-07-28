@@ -1,64 +1,99 @@
-# 📄 **PDF Outline Extractor – Adobe India Hackathon 2025**
+# PDF Outline Extractor — Adobe India Hackathon 2025
 
-## 🚀 **Build Docker Image**
-Run this from your project root:
+Welcome to the **Connecting the Dots** challenge solution, designed to transform static PDFs into intelligent, structured documents by extracting clean, hierarchical outlines of titles and headings.
+
+---
+
+## Approach
+
+Our extractor utilizes **layout and typographical cues** to identify document structure rather than plain text parsing:
+
+- **PyMuPDF (fitz)** extracts each line’s text, font size, style (bold/italic), and vertical position.
+- **Heading detection** employs a hybrid strategy:
+  - Font size thresholds relative to dominant body text size.
+  - Recognition of numbered section headings (e.g., "1", "1.1", "1.1.1") to infer heading levels (H1, H2, H3).
+  - Bold or italic styling increases confidence of heading candidates.
+  - The document title is inferred as the first prominent non-heading line on the first page.
+- **Noise filtering** removes page numbers, headers, footers, and common copyright/version text without hardcoded rules.
+- Headings are output in **natural reading order**, sorted by page (zero-indexed) and vertical position.
+
+---
+
+## Features
+
+- Processes PDFs with **high accuracy and speed** (under 10 seconds for 50-page documents).
+- Fully **offline**, compatible with **AMD64 CPUs**, requiring no GPUs or internet access.
+- Supports complex layouts and **multilingual documents**.
+- Outputs structured **JSON** files:
+
+```json
+{
+  "title": "Document Title",
+  "outline": [
+    { "level": "H1", "text": "Introduction", "page": 1 },
+    { "level": "H2", "text": "Background", "page": 2 }
+  ]
+}
+```
+
+- Seamlessly integrates with Round 1B semantic ranking and downstream processing.
+
+---
+
+## Build and Run Instructions
+
+1. **Build Docker image:**
+
 ```bash
 docker build --platform linux/amd64 -t pdf-outline-extractor .
-▶Run Container
+```
+
+2. **Run Docker container:**
+
+```bash
 docker run --rm \
   -v $(pwd)/input:/app/input \
   -v $(pwd)/output:/app/output \
   --network none \
   pdf-outline-extractor
-📄 View Output
-After execution, check:
+```
+
+3. **Access output files:**
+
+```bash
 ls output/
 cat output/yourfile.json
-🛠️ Technical Approach
-This solution programmatically reconstructs the document outline of a PDF by analyzing its visual typography and layout metadata. Unlike naive text extractors, it uses low-level font properties and page geometry to infer the document’s logical structure.
+```
 
-🔹 Text Parsing and Metadata Extraction
-Built on PyMuPDF (fitz), which parses PDFs at the span level, exposing:
+---
 
-📏 Font size
+## Project Structure
 
-📝 Font name (e.g., Bold, Italic)
+```
+/app
+├── main.py       # PDF outline extraction code
+├── Dockerfile     # Docker container config
+├── README.md      # This documentation
+/input              # Place PDFs here
+/output             # Extracted JSON files appear here
+```
 
-⚡ Style flags (bitwise indicators for emphasis)
+---
 
-🖼️ Bounding boxes (for spatial analysis)
+## Technology Stack
 
-✅ This avoids OCR overhead, ensuring fast CPU-only execution.
+- **PyMuPDF (fitz):** Efficient PDF parsing and layout extraction of font and position metadata.
+- **Python Standard Library:** JSON, regex, and file system modules.
 
-🔹 Heading Hierarchy Detection
-A relative thresholding algorithm dynamically scales heading detection per document:
+---
 
-H1 ≥ 75% of the largest font size
+## Why This Matters
 
-H2 ≥ 60% of the largest font size
+By enabling machines to understand document structure, this solution empowers:
 
-H3 ≥ 50% of the largest font size
+- Enhanced **semantic search and navigation** in large PDF corpora.
+- Smarter **content discovery and linking** across documents.
+- The foundation for **AI-powered interactive reading experiences**.
 
-Additional features:
+Connect the dots. Bring your PDFs to life!
 
-🏷️ Title detection: First occurrence ≥ 95% of maximum font size
-
-🔠 Style enhancement: Bold/italic detection influences heading confidence scores
-
-🔹 Vertical and Multilingual Support
-🌍 Unicode-aware extraction handles multilingual scripts (Chinese, Japanese, etc.)
-
-🔄 A vertical orientation detector (bounding box aspect ratio) flags rotated/vertical text for reconstruction before heading classification
-
-🔹 Structured JSON Output
-Generates a JSON with heading level, text, page number, and style attributes:
-
-json
-
-Edit
-{
-  "title": "Document Title",
-  "outline": [
-    { "level": "H1", "text": "Introduction", "page": 1, "style": "bold" }
-  ]
-}
