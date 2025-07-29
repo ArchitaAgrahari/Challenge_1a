@@ -4,11 +4,11 @@ import json
 import re
 from collections import Counter
 
-# Directories (please update as per your setup)
-INPUT_DIR = "Challenge_1a\sample_dataset\pdfs"  # Path to PDF input folder
-OUTPUT_DIR = "Challenge_1a\sample_dataset\outputs"  # Path where JSON outputs will be saved
 
-# Regex to detect numbered headings like "1", "2.1", "3.2.1"
+INPUT_DIR = "Challenge_1a\sample_dataset\pdfs"  
+OUTPUT_DIR = "Challenge_1a\sample_dataset\outputs"  
+
+
 NUMERIC_HEADING_RE = re.compile(r"^(\d+(\.\d+)*)(\.|\s)(.*)")
 
 def clean(text):
@@ -26,7 +26,7 @@ def extract_blocks(pdf_path):
     font_sizes = []
     freq_counter = Counter()
 
-    for page_index, page in enumerate(doc):  # page_index is zero-based
+    for page_index, page in enumerate(doc):  
         page_blocks = page.get_text("dict")["blocks"]
         for block in page_blocks:
             if "lines" not in block:
@@ -43,7 +43,7 @@ def extract_blocks(pdf_path):
                 fonts = [span["font"] for span in spans]
                 is_bold = any("bold" in f.lower() for f in fonts)
                 is_italic = any("italic" in f.lower() or "oblique" in f.lower() for f in fonts)
-                # Approximate vertical position (top of line)
+               
                 y0 = spans[0]["bbox"][1] if spans else 0
 
                 blocks.append({
@@ -68,7 +68,7 @@ def is_heading_candidate(text, size, body_size, is_bold, is_italic):
         return False
     if text.isupper() and not NUMERIC_HEADING_RE.match(text):
         return False
-    # Exclude lines indicating versions and copyright info
+    
     if any(x in text.lower() for x in ["version", "copyright", "all rights reserved"]):
         return False
     return is_bold or is_italic or NUMERIC_HEADING_RE.match(text)
@@ -80,13 +80,13 @@ def classify_level(text, size, body_size, font_sizes_list):
         numbering = m.group(1)
         return "H" + str(get_heading_level(numbering))
 
-    # For non-numbered headings, use font size clustering heuristic
+    
     sorted_sizes = sorted(set(font_sizes_list), reverse=True)
     for idx, fs in enumerate(sorted_sizes):
         if abs(size - fs) < 0.5:
             return "H" + str(idx + 1)
 
-    # Default to H3 if no match found
+   
     return "H3"
 
 def extract_headings(blocks, font_sizes):
@@ -97,7 +97,7 @@ def extract_headings(blocks, font_sizes):
     if not font_sizes:
         return "", []
 
-    # Determine typical body font size (mode of font sizes)
+    
     font_size_counts = Counter(font_sizes)
     body_size = font_size_counts.most_common(1)[0][0]
 
@@ -116,20 +116,19 @@ def extract_headings(blocks, font_sizes):
             continue
         seen.add(key)
 
-        # Identify document title — first big non-heading line on first page
         if page == 0 and not title_candidate and size > body_size + 1 and not is_heading_candidate(text, size, body_size, is_bold, is_italic):
             title_candidate = text
             continue
 
-        # Skip the title line from headings
+      
         if title_candidate and text == title_candidate and page == 0:
             continue
 
-        # Determine if this block is a heading
+        
         if not is_heading_candidate(text, size, body_size, is_bold, is_italic):
             continue
 
-        # Assign heading level based on numbering or font sizes
+      
         level = classify_level(text, size, body_size, font_sizes)
 
         outline.append({
@@ -139,14 +138,13 @@ def extract_headings(blocks, font_sizes):
             "y0": y0
         })
 
-    # Sort headings by page and vertical position
+   
     outline.sort(key=lambda x: (x["page"], x["y0"]))
 
-    # Remove position info before output
+    
     for heading in outline:
         heading.pop("y0", None)
 
-    # If no title candidate, fallback to first heading
     if not title_candidate and outline:
         title_candidate = outline[0]["text"]
         outline = outline[1:]
